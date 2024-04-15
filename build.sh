@@ -4,17 +4,13 @@ set -o errexit -o pipefail -o noclobber
 IFS='
 '
 TMPDIR="${TMPDIR-/tmp}"
-self="$0"
-tmpdir="$TMPDIR/$self.${BUILD_PID:-$$}"
-if [ ! "$BUILD_PID" ]; then
-    export BUILD_PID=$$
-    mkdir "$tmpdir"
-    trap "rm -r $tmpdir" EXIT
-    semaphore="$tmpdir/semaphore"
-    mkfifo "$semaphore"
-    printf '\n\n\n\n\n\n\n\n' >>"$semaphore" &
-    exec 3<"$semaphore" 4>>"$semaphore"
-fi
+tmpdir="$TMPDIR/$0.$$"
+mkdir "$tmpdir"
+trap "rm -r $tmpdir" EXIT
+semaphore="$tmpdir/semaphore"
+mkfifo "$semaphore"
+printf '\n\n\n\n\n\n\n\n' >>"$semaphore" &
+exec 3<"$semaphore" 4>>"$semaphore"
 
 sem_wait() {
     echo sem_wait >&2
@@ -32,8 +28,11 @@ event_wait() {
 }
 
 event_set() {
-    : >"$tmpdir/$$"
-    event_wait "$1" & mv -f "$tmpdir/$$" "$1" >>"$1"
+    mkfifo "$1" 2>>/dev/null || true
+    exec sleep 32767 <"$1" & # sleep to prevent sh from reaping
+    : >"$1.tmp"
+    mv -f "$1.tmp" "$1" >>"$1"
+    kill $! # kill in case it blocks on opening fifo
 }
 
 event_clear() {
@@ -48,12 +47,14 @@ runcmds() {
         arg=${line#* }
         case "$cmd" in
         "dep")
-            "$self" "$arg" 3<&3 4>&4 &
             waitlist="$waitlist
 $arg"
             ;;
         "wait")
             sem_post
+            for target in $waitlist; do
+                build "$target"
+            done
             for target in $waitlist; do
                 event_wait "$tmpdir/$target.event"
             done
@@ -67,12 +68,18 @@ $arg"
     done
 }
 
-echo "./Buildfile $*" >&2
-target="${1-Buildfile}"
-fifo="$tmpdir/$target.stdin"
-mkfifo "$fifo" 2>>/dev/null || exit 0
-sem_wait
-./Buildfile "$@" <"$fifo" | runcmds >>"$fifo"
-event_set "$tmpdir/$target.event"
-sem_post
-wait
+build() {
+    target="${1-Buildfile}"
+    fifo="$tmpdir/$target.stdin"
+    mkfifo "$fifo" 2>>/dev/null || return 0
+    sem_wait
+#    echo "./Buildfile $*" >&2
+    (
+        ./Buildfile "$@" <"$fifo" | runcmds >>"$fifo"
+        event_set "$tmpdir/$target.event"
+        sem_post
+    ) &
+}
+
+build
+wait $!
