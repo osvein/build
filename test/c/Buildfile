@@ -1,21 +1,12 @@
 #!/bin/sh
 
+. ../../common.sh
+
 IFS='
 '
 LDFLAGS="$LDFLAGS"
 CC="${CC:-c99}"
 CFLAGS="${CFLAGS:-"-O1"}"
-
-dep() {
-    for prereq in "$@"; do
-        echo dep $prereq
-    done
-}
-
-wait() {
-    echo wait
-    read ignore
-}
 
 out() {
     objs="main.o
@@ -32,7 +23,7 @@ obj() {
     dep "$src"
     wait
     "$CC" $CFLAGS -c "$src" -MMD
-    ../../make2build.sh "$1" <"$dep"
+    make2build "$1" <"$dep"
     rm "$dep"
     wait
 }

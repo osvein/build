@@ -1,8 +1,18 @@
-#!/bin/sh
+dep() {
+    for prereq in "$@"; do
+        echo dep "$prereq"
+    done
+}
+
+wait() {
+    echo wait
+    read ignore
+}
+
 # convert Makefile-like output from makedepend / cc -M to build commands
 # usage: ./make2build.sh target_name <depend_file
-
-sed '
+make2build() {
+    sed '
 /^\t/d
 s/^[^:]*'"$1"'[^:]*:[[:space:]]*//
 t a
@@ -19,3 +29,4 @@ s/[[:space:]]*$//
 s/[[:space:]]\{1,\}/\ndep /g
 s/^/dep /
 '
+}
