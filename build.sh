@@ -10,7 +10,21 @@ if [ ! "$BUILD_PID" ]; then
     export BUILD_PID=$$
     mkdir "$tmpdir"
     trap "rm -r $tmpdir" EXIT
+    semaphore="$tmpdir/semaphore"
+    mkfifo "$semaphore"
+    printf '\n\n\n\n\n\n\n\n' >>"$semaphore" &
+    exec 3<"$semaphore" 4>>"$semaphore"
 fi
+
+sem_wait() {
+    echo sem_wait >&2
+    dd of=/dev/null bs=1 count=1 <&3 2>>/dev/null
+}
+
+sem_post() {
+    echo sem_post >&2
+    echo >&4
+}
 
 event_wait() {
     mkfifo "$1" 2>>/dev/null || true
@@ -34,14 +48,16 @@ runcmds() {
         arg=${line#* }
         case "$cmd" in
         "dep")
-            "$self" "$arg" &
+            "$self" "$arg" 3<&3 4>&4 &
             waitlist="$waitlist
 $arg"
             ;;
         "wait")
+            sem_post
             for target in $waitlist; do
                 event_wait "$tmpdir/$target.event"
             done
+            sem_wait
             echo
             ;;
         *)
@@ -55,6 +71,8 @@ echo "./Buildfile $*" >&2
 target="${1-Buildfile}"
 fifo="$tmpdir/$target.stdin"
 mkfifo "$fifo" 2>>/dev/null || exit 0
+sem_wait
 ./Buildfile "$@" <"$fifo" | runcmds >>"$fifo"
 event_set "$tmpdir/$target.event"
+sem_post
 wait
