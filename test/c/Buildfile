@@ -6,6 +6,12 @@ LDFLAGS="$LDFLAGS"
 CC="${CC:-c99}"
 CFLAGS="${CFLAGS:-"-O1"}"
 
+dep() {
+    for prereq in "$@"; do
+        echo dep $prereq
+    done
+}
+
 wait() {
     echo wait
     read ignore
@@ -14,9 +20,7 @@ wait() {
 out() {
     objs="main.o
 a.o"
-    for prereq in $objs; do
-        echo dep $prereq
-    done
+    dep $objs
     wait
     "$CC" $CFLAGS $LDFLAGS -o a.out $objs
 }
@@ -25,7 +29,7 @@ obj() {
     name="${1%.o}"
     src="$name.c"
     dep="$name.d"
-    echo dep "$src"
+    dep "$src"
     wait
     "$CC" $CFLAGS -c "$src" -MMD
     ../../make2build.sh "$1" <"$dep"
@@ -35,7 +39,7 @@ obj() {
 
 case "$1" in
     "")
-        echo dep a.out
+        dep a.out
         wait
         ;;
     a.out) out ;;
