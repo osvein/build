@@ -1,4 +1,5 @@
 #!/bin/sh
+# usage: ./build.sh [target...]
 
 set -o errexit -o pipefail -o noclobber
 IFS='
@@ -17,6 +18,7 @@ while getopts j: opt; do
     *) usage
     esac
 done
+shift $(($OPTIND - 1))
 
 tmpdir="$TMPDIR/$0.$$"
 mkdir "$tmpdir"
@@ -95,5 +97,11 @@ build() {
     ) &
 }
 
-build
-wait $!
+if [ $# = 0 ]; then
+    build
+else
+    for file in "$@"; do
+        build "$file"
+    done
+fi
+wait
