@@ -4,12 +4,29 @@ set -o errexit -o pipefail -o noclobber
 IFS='
 '
 TMPDIR="${TMPDIR-/tmp}"
+
+usage() {
+    printf "usage: %s [-j jobs] [target_name...]" "$0" >&2
+    exit 1
+}
+
+njobs=1
+while getopts j: opt; do
+    case $opt in
+    j) njobs="$OPTARG" ;;
+    *) usage
+    esac
+done
+
 tmpdir="$TMPDIR/$0.$$"
 mkdir "$tmpdir"
 trap "rm -r $tmpdir" EXIT
 semaphore="$tmpdir/semaphore"
 mkfifo "$semaphore"
-printf '\n\n\n\n\n\n\n\n' >>"$semaphore" &
+while [ $njobs -gt 0 ]; do
+    echo
+    njobs=$(($njobs - 1))
+done >>"$semaphore" &
 exec 3<"$semaphore" 4>>"$semaphore"
 
 sem_wait() {
