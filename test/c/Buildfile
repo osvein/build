@@ -1,0 +1,43 @@
+#!/bin/sh
+
+IFS='
+'
+LDFLAGS="$LDFLAGS"
+CC="${CC:-c99}"
+CFLAGS="${CFLAGS:-"-O1"}"
+
+wait() {
+    echo wait
+    read ignore
+}
+
+out() {
+    objs="main.o
+a.o"
+    for prereq in $objs; do
+        echo dep $prereq
+    done
+    wait
+    "$CC" $CFLAGS $LDFLAGS -o a.out $objs
+}
+
+obj() {
+    name="${1%.o}"
+    src="$name.c"
+    dep="$name.d"
+    echo dep "$src"
+    wait
+    "$CC" $CFLAGS -c "$src" -MMD
+    ../../make2build.sh "$1" <"$dep"
+    rm "$dep"
+    wait
+}
+
+case "$1" in
+    "")
+        echo dep a.out
+        wait
+        ;;
+    a.out) out ;;
+    *.o) obj $1 ;;
+esac
