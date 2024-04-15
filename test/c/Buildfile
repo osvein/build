@@ -1,38 +1,13 @@
-#!/bin/sh
+#!/bin/sh -x
 
 . ../../common.sh
-
-IFS='
-'
-LDFLAGS="$LDFLAGS"
-CC="${CC:-c99}"
-CFLAGS="${CFLAGS:-"-O1"}"
-
-out() {
-    objs="main.o
-a.o"
-    dep $objs
-    wait
-    "$CC" $CFLAGS $LDFLAGS -o a.out $objs
-}
-
-obj() {
-    name="${1%.o}"
-    src="$name.c"
-    dep="$name.d"
-    dep "$src"
-    wait
-    "$CC" $CFLAGS -c "$src" -MMD
-    make2build "$1" <"$dep"
-    rm "$dep"
-    wait
-}
+. ../../c.sh
 
 case "$1" in
     "")
         dep a.out
         wait
         ;;
-    a.out) out ;;
-    *.o) obj $1 ;;
+    a.out) exe a.out main.o a.o ;;
+    *.o) c2o "${1%.o}" ;;
 esac
