@@ -10,7 +10,7 @@ usage() {
     exit 1
 }
 
-njobs=1
+njobs=$(getconf _NPROCESSORS_ONLN 2>>/dev/null || echo 1)
 while getopts j: opt; do
     case $opt in
     j) njobs="$OPTARG" ;;
