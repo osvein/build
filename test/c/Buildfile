@@ -1,9 +1,9 @@
 #!/bin/sh
 
-. ../../common.sh
-dep ../../common.sh
-. ../../c.sh
-dep ../../c.sh
+. util/common.sh
+dep util/common.sh
+. util/c.sh
+dep util/c.sh
 
 case "$1" in
     "")
