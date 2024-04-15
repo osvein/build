@@ -13,12 +13,10 @@ printf '\n\n\n\n\n\n\n\n' >>"$semaphore" &
 exec 3<"$semaphore" 4>>"$semaphore"
 
 sem_wait() {
-    echo sem_wait >&2
     dd of=/dev/null bs=1 count=1 <&3 2>>/dev/null
 }
 
 sem_post() {
-    echo sem_post >&2
     echo >&4
 }
 
@@ -42,7 +40,6 @@ event_clear() {
 runcmds() {
     waitlist=
     while read line; do
-        #echo "command: $line" >&2
         cmd=${line%% *}
         arg=${line#* }
         case "$cmd" in
@@ -73,7 +70,6 @@ build() {
     fifo="$tmpdir/$target.stdin"
     mkfifo "$fifo" 2>>/dev/null || return 0
     sem_wait
-#    echo "./Buildfile $*" >&2
     (
         ./Buildfile "$@" <"$fifo" | runcmds >>"$fifo"
         event_set "$tmpdir/$target.event"
