@@ -74,6 +74,7 @@ $arg"
             done
             sem_wait
             echo
+            waitlist=
             ;;
         *)
             echo "$1: invalid command: $cmd" >&2
